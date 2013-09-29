@@ -4,33 +4,31 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Shape;
 
-import engine.CollisionEventListener.Collision;
-
 public class BasicObject {
 	
 	protected int x, y;
 	protected int width, height;
 	protected Color color;
+	protected Engine engine;
 	
-	public BasicObject(int x, int y, Color color, int width, int height)
+	public BasicObject(int x, int y, Color color, Engine engine)
 	{
 		this.x = x;
 		this.y = y;
-		this.width = width;
-		this.height = height;
+		this.width = engine.getCellWidth();
+		this.height = engine.getCellHeight();
 		this.color = color;
+		this.engine = engine;
 	}
 	
 	public void update()
 	{
-		
 	}
-	
+
 	public void draw(Graphics2D g)
 	{
 		g.setColor(this.color);
-		g.fill3DRect(x * width, y * height,
-				width - 1, height - 1, true);
+		g.fillRect(x*width, y*height, width, height);
 	}
 	
 	public void destroy()
@@ -56,6 +54,14 @@ public class BasicObject {
 	public void setY(int y)
 	{
 		this.y = y;
+	}
+	
+	public int getWidth() {
+		return this.width;
+	}
+	
+	public int getHeight() {
+		return this.height;
 	}
 	
 	public boolean intersects(BasicObject object)
@@ -94,19 +100,13 @@ public class BasicObject {
 		else
 			return false;
 	}
-	
-	public Collision getCollisionDirection(BasicObject second)
-	{
-		if(this.x+1 == second.x && this.y == second.y)
-			return Collision.RIGHT;
-		else if(this.x-1 == second.x && this.y == second.y)
-			return Collision.LEFT;
-		else if(this.y+1 == second.y && this.x == second.x)
-			return Collision.BOT;
-		else if(this.y-1 == second.y && this.x == second.x)
-			return Collision.TOP;
-		else
-			return Collision.BOTLEFT;
-	}
+
+    public void setColor(Color color) {
+        this.color = color;
+    }
+
+    public Color getColor() {
+        return this.color;
+    }
 	
 }

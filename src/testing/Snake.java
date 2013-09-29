@@ -9,19 +9,16 @@ import javax.swing.SwingUtilities;
 import engine.BasicObject;
 import engine.CollisionEventListener;
 import engine.Engine;
-import engine.MovingObject;
 
 public class Snake implements KeyListener
 {
 	Engine engine = null;
-	MovingObject player;
+	SnakeElement player;
 	
-
-	static final int CELL_SIZE = 10;
 	static final int ROWS = 50;
 	static final int COLUMNS = 50;
-	static final int SCREEN_WIDTH = COLUMNS*CELL_SIZE;
-	static final int SCREEN_HEIGHT = ROWS*CELL_SIZE;
+	static final int SCREEN_WIDTH = 600;
+	static final int SCREEN_HEIGHT = 600;
 	static final Color SCREEN_COLOR = Color.LIGHT_GRAY;
 	
 	static final int UPDATE_RATE = 15;
@@ -31,37 +28,9 @@ public class Snake implements KeyListener
 	{
 
 		@Override
-		public void collision(BasicObject first, BasicObject second, Collision collision) {
-			if(first instanceof MovingObject)
-			{
-				MovingObject moving = ((MovingObject)first);
-				switch(collision)
-				{
-				case TOP: moving.upPossible = false; break;
-				case BOT: moving.downPossible = false; break;
-				case LEFT: moving.leftPossible = false; break;
-				case RIGHT: moving.rightPossible = false; break;
-				case BOTLEFT: break;
-				case BOTRIGHT: break;
-				case TOPLEFT: break;
-				case TOPRIGHT: break;
-				}
-			}
-			if(second instanceof MovingObject)
-			{
-				MovingObject moving = ((MovingObject)second);
-				switch(collision)
-				{
-				case TOP: moving.upPossible = false; break;
-				case BOT: moving.downPossible = false; break;
-				case LEFT: moving.leftPossible = false; break;
-				case RIGHT: moving.rightPossible = false; break;
-				case BOTLEFT: break;
-				case BOTRIGHT: break;
-				case TOPLEFT: break;
-				case TOPRIGHT: break;
-				}
-			}
+		public void collision(BasicObject first, BasicObject second) {
+			System.out.println("Collision");
+			onGameOver();
 		}
 
 	};
@@ -71,19 +40,15 @@ public class Snake implements KeyListener
 		SwingUtilities.invokeLater(new Runnable() {
 			@Override
 			public void run() {
-				Snake snake = new Snake();
-				snake.setEngine(new Engine("Snake", snake.getKeyListener(), snake.getCollisionListener(), ROWS, COLUMNS, CELL_SIZE, UPDATE_RATE, SCREEN_COLOR));
-				snake.getEngine().addObject(snake.getPlayer());
-				snake.getEngine().addObject(new BasicObject(10, 10, Color.RED, CELL_SIZE, CELL_SIZE));
-				snake.getEngine().addObject(new BasicObject(20, 20, Color.RED, CELL_SIZE, CELL_SIZE));
-				snake.getEngine().addObject(new BasicObject(30, 30, Color.RED, CELL_SIZE, CELL_SIZE));
-				snake.getEngine().addObject(new BasicObject(40, 40, Color.RED, CELL_SIZE, CELL_SIZE));
-				snake.getEngine().addObject(new BasicObject(45, 45, Color.RED, CELL_SIZE, CELL_SIZE));
-				snake.getEngine().engineStart();
+				new Snake();
 			}
 		});
 	}
 	
+	protected void onGameOver() {
+		engine.setTitle("Snake - GameOver");
+	}
+
 	protected void setEngine(Engine engine) {
 		this.engine = engine;
 	}
@@ -99,11 +64,24 @@ public class Snake implements KeyListener
 
 	public Snake()
 	{
-		player = new MovingObject(4, 6, Color.GREEN, CELL_SIZE, CELL_SIZE);
+		this.setEngine(new Engine("Snake", this.getKeyListener(), this.getCollisionListener(), SCREEN_WIDTH, SCREEN_HEIGHT, COLUMNS, ROWS, true, UPDATE_RATE, SCREEN_COLOR));
+		this.getEngine().addObject(this.getPlayer());
+		this.getEngine().addObject(new BasicObject(10, 10, Color.RED, engine));
+        this.getEngine().addObject(new BasicObject(15, 15, Color.RED, engine));
+		this.getEngine().addObject(new BasicObject(20, 20, Color.RED, engine));
+        this.getEngine().addObject(new BasicObject(25, 25, Color.RED, engine));
+		this.getEngine().addObject(new BasicObject(30, 30, Color.RED, engine));
+        this.getEngine().addObject(new BasicObject(35, 35, Color.RED, engine));
+		this.getEngine().addObject(new BasicObject(40, 40, Color.RED, engine));
+		this.getEngine().addObject(new BasicObject(45, 45, Color.RED, engine));
+        this.getEngine().addObject(new BasicObject(50, 50, Color.RED, engine));
+		this.getEngine().engineStart();
 	}
 	
-	public MovingObject getPlayer()
+	public SnakeElement getPlayer()
 	{
+		if(player == null)
+			player = new SnakeElement(5, 5, Color.BLACK, engine);
 		return player;
 	}
 	
@@ -117,16 +95,16 @@ public class Snake implements KeyListener
 		switch(e.getKeyCode())
 		{
 		case KeyEvent.VK_UP:
-			player.setUp(true);
+			player.upPressed();
 			break;
 		case KeyEvent.VK_DOWN:
-			player.setDown(true);
+			player.downPressed();
 			break;
 		case KeyEvent.VK_LEFT:
-			player.setLeft(true);
+			player.leftPressed();
 			break;
 		case KeyEvent.VK_RIGHT:
-			player.setRight(true);
+			player.rightPressed();
 			break;
 		case KeyEvent.VK_ESCAPE:
 			this.getEngine().engineShutdown();
@@ -136,21 +114,6 @@ public class Snake implements KeyListener
 
 	@Override
 	public void keyReleased(KeyEvent e) {
-		switch(e.getKeyCode())
-		{
-		case KeyEvent.VK_UP:
-			player.setUp(false);
-			break;
-		case KeyEvent.VK_DOWN:
-			player.setDown(false);
-			break;
-		case KeyEvent.VK_LEFT:
-			player.setLeft(false);
-			break;
-		case KeyEvent.VK_RIGHT:
-			player.setRight(false);
-			break;
-		}
 	}
 
 	@Override

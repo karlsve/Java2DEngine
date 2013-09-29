@@ -1,11 +1,16 @@
 package engine;
 
-import java.awt.Color;
+import java.awt.Graphics2D;
 
 public class WallObject extends BasicObject {
 
-	public WallObject(int x, int y, Color color, int width, int height) {
-		super(x, y, color, width, height);
+	public WallObject(int x, int y, Engine engine) {
+		super(x, y, engine.getColor(), engine);
+	}
+	
+	@Override
+	public void draw(Graphics2D g) {
+		
 	}
 
 }

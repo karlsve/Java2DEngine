@@ -11,8 +11,6 @@ import java.util.List;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
-import engine.CollisionEventListener.Collision;
-
 
 public class Engine extends JFrame
 {
@@ -23,9 +21,15 @@ public class Engine extends JFrame
 	private static final long serialVersionUID = 8054078025904310863L;
 	
 	// Define variables for the game
+	private int width = 0;
+	private int height = 0;
 	private int rows = 0;
 	private int columns = 0;
-	private int cell_size = 0;
+	private int cell_width = 0;
+	private int cell_height = 0;
+	private int fps = 0;
+	private String titleText = "";
+	private boolean showFPS = false;
 	
 	private Color color;
 
@@ -35,7 +39,7 @@ public class Engine extends JFrame
 	// Game state enum
 	static enum State
 	{
-		INITIALIZED, PLAYING, PAUSED, GAMEOVER, DESTROYED
+		INITIALIZED, PLAYING, PAUSED, GAMEOVER, DESTROYED, UPDATING
 	}
 	
 	// State
@@ -43,20 +47,26 @@ public class Engine extends JFrame
 	
 	// Define instance variables
 	private List<BasicObject> objects = new ArrayList<BasicObject>();
+	private List<BasicObject> objectsToAdd = new ArrayList<BasicObject>();
+	private List<BasicObject> objectsToRemove = new ArrayList<BasicObject>();
 	private CollisionEventListener collisionListener = null;
 	
 	// Handle for custom game panel
 	private Screen screen;
 	
-	public Engine(String title, KeyListener keyListener, CollisionEventListener collisionListener, int rows, int columns, int cell_size, int updateRate, Color color)
+	public Engine(String title, KeyListener keyListener, CollisionEventListener collisionListener, int width, int height, int columns, int rows, boolean showFPS, int updateRate, Color color)
 	{
-		// Initialize the objects and the screen
+	    this.showFPS = showFPS;
 		this.collisionListener = collisionListener;
-		this.rows = rows;
+		this.width = width;
+		this.height = height;
 		this.columns = columns;
-		this.cell_size = cell_size;
+		this.rows = rows;
+		this.cell_width = width / columns;
+		this.cell_height = height / rows;
 		this.updateRate = updateRate;
 		this.color = color;
+		this.titleText = title;
 		engineInit();
 		
 		// UI components
@@ -68,19 +78,85 @@ public class Engine extends JFrame
 		this.pack();
 		this.setTitle(title);
 		this.setVisible(true);
-		
+	}
+    
+    public Engine(String title, int width, int height, int columns, int rows, boolean showFPS, int updateRate, Color color)
+    {
+        // Initialize the objects and the screen
+        this.showFPS = showFPS;
+        this.width = width;
+        this.height = height;
+        this.columns = columns;
+        this.rows = rows;
+        this.cell_width = width / columns;
+        this.cell_height = height / rows;
+        this.updateRate = updateRate;
+        this.color = color;
+        this.titleText = title;
+        engineInit();
+        
+        // UI components
+        screen = new Screen(color);
+        screen.setPreferredSize(new Dimension(this.getScreenWidth(), this.getScreenHeight()));
+        this.setContentPane(screen);
+        
+        this.setDefaultCloseOperation(EXIT_ON_CLOSE);
+        this.pack();
+        this.setTitle(title);
+        this.setSize(width, height);
+        this.setVisible(true);
+    }
+	
+	private void updateTitle() {
+	    if(this.showFPS) {
+	        this.setTitle(this.titleText + " " + this.fps);
+	    } else {
+            this.setTitle(this.titleText);
+	    }
+	}
+	
+	public Color getColor() {
+		return this.color;
+	}
+	
+	public int getScreenColumns() {
+		return this.columns;
+	}
+	
+	public int getScreenRows() {
+		return this.rows;
+	}
+	
+	public int getScreenWidth() {
+		return this.width;
 	}
 
-	private int getScreenHeight() {
-		return this.rows*this.cell_size;
+	public int getScreenHeight() {
+		return this.height;
 	}
-
-	private int getScreenWidth() {
-		return this.columns*this.cell_size;
+	
+	public int getCellWidth() {
+		return this.cell_width;
+	}
+	
+	public int getCellHeight() {
+		return this.cell_height;
 	}
 
 	public void engineInit() 
 	{
+		for(int x = -1; x<this.columns; x++) {
+			objects.add(new WallObject(x, -1, this));
+		}
+		for(int x = -1; x<this.columns; x++) {
+			objects.add(new WallObject(x, this.columns, this));
+		}
+		for(int y = -1; y<this.rows; y++) {
+			objects.add(new WallObject(-1, y, this));
+		}
+		for(int y = -1; y<this.rows; y++) {
+			objects.add(new WallObject(this.rows, y, this));
+		}
 		state = State.INITIALIZED;
 	}
 	
@@ -106,13 +182,17 @@ public class Engine extends JFrame
 	{
 		state = State.PLAYING;
 		long beginTime, timeTaken, timeLeft;
-		
+		int frames = 0;
+		int startSecond = (int)((System.currentTimeMillis() / 1000) % 60);
 		while(state != State.GAMEOVER)
 		{
 			beginTime = System.nanoTime();
 			if(state == State.PLAYING)
 			{
+				state = State.UPDATING;
 				engineUpdate();
+				engineUpdateObjects();
+				state = State.PLAYING;
 			}
 			
 			repaint();
@@ -125,6 +205,12 @@ public class Engine extends JFrame
 				Thread.sleep(timeLeft);
 			}
 			catch(InterruptedException e) { }
+			frames++;
+			if(startSecond < (int)((System.currentTimeMillis() / 1000) % 60)) {
+			    this.fps = frames;
+			    frames = 0;
+		        startSecond = (int)((System.currentTimeMillis() / 1000) % 60);
+			}
 		}
 	}
 	
@@ -138,17 +224,36 @@ public class Engine extends JFrame
 		
 	}
 	
+	public void engineUpdateScreenSize(int newWidth, int newHeight) {
+		this.width = newWidth;
+		this.height = newHeight;
+		this.cell_width = this.width / this.columns;
+		this.cell_height = this.height / this.columns;
+		for(BasicObject object : objects) {
+			object.width = this.cell_width;
+			object.height = this.cell_height;
+		}
+	}
+	
 	public void engineUpdate()
 	{
-		this.collisionDetection();
 		for(BasicObject object : objects)
 		{
 			object.update();
 		}
 	}
 	
+	public void engineUpdateObjects() {
+		objects.addAll(objectsToAdd);
+		objectsToAdd.clear();
+		
+		objects.removeAll(objectsToRemove);
+		objectsToRemove.clear();
+	}
+	
 	public void engineDraw(Graphics2D g)
 	{
+	    this.updateTitle();
 		switch(state)
 		{
 		case INITIALIZED:
@@ -174,46 +279,32 @@ public class Engine extends JFrame
 		}
 	}
 	
-	private void collisionDetection()
-	{
-		for(int i = 0; i<objects.size(); i++)
-		{
-			BasicObject first = objects.get(i);
-			if(first.x < 1)
-			{
-				collisionListener.collision(first, new WallObject(0, 0, this.color, 0, 0), Collision.LEFT);
-			}
-			if(first.x >= getColumns())
-			{
-				collisionListener.collision(first, new WallObject(getColumns(), 0, this.color, 0, 0), Collision.RIGHT);
-			}
-			if(first.y < 1)
-			{
-				collisionListener.collision(first, new WallObject(0, 0, this.color, 0, 0), Collision.TOP);
-			}
-			if(first.y >= getRows())
-			{
-				collisionListener.collision(first, new WallObject(0, getRows(), this.color, 0, 0), Collision.BOT);
-			}
-			for(int j = i+1; j<objects.size(); j++)
-			{
-				BasicObject second = objects.get(j);
-				if(first.nextTo(second))
-				{
-					collisionListener.collision(first, second, first.getCollisionDirection(second));
-				}
-			}
-		}
+	public void onCollision(BasicObject first, BasicObject second) {
+		this.collisionListener.collision(first, second);
+	}
+	
+	public List<BasicObject> getObjects() {
+		return objects;
 	}
 	
 	public void addObject(BasicObject object)
 	{
-		objects.add(object);
+	    if((object.getX() > 0 && object.getX() < this.rows) && (object.getY() > 0 && object.getY() < this.columns)) {
+	        if(state == State.UPDATING) {
+	            objectsToAdd.add(object);
+	        } else {
+	            objects.add(object);
+	        }
+	    }
 	}
 	
 	public void removeObject(BasicObject object)
 	{
-		objects.remove(object);
+		if(state == State.UPDATING) {
+			objectsToRemove.add(object);
+		} else {
+			objects.remove(object);
+		}
 	}
 	
 	public int getRows() {
@@ -224,7 +315,15 @@ public class Engine extends JFrame
 		return this.rows;
 	}
 
-	class Screen extends JPanel
+	public boolean isShowFPS() {
+        return showFPS;
+    }
+
+    public void setShowFPS(boolean showFPS) {
+        this.showFPS = showFPS;
+    }
+
+    class Screen extends JPanel
 	{
 
 		/**
@@ -241,6 +340,13 @@ public class Engine extends JFrame
 			this.requestFocus();
 			this.addKeyListener(keyListener);
 		}
+        
+        public Screen(Color color)
+        {
+            this.color = color;
+            this.setFocusable(true);
+            this.requestFocus();
+        }
 		
 		@Override
 		public void paintComponent(Graphics g)
